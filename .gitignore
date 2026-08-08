@@ -1,0 +1,19 @@
+# Ambientes virtuais
+venv/
+env/
+.env
+
+# Pastas de dados e modelos (muito grandes pro GitHub)
+musicas/
+saida_embeddings/
+dataset/
+output/
+*.npz
+*.mp3
+*.wav
+*.flac
+
+# Arquivos temporários e de sistema
+__pycache__/
+*.pyc
+.DS_Store

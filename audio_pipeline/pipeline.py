@@ -15,7 +15,7 @@ from pooling import aggregate_embeddings
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-def process_track(filepath: str) -> dict:
+def process_track(filepath: str, track_id: str) -> dict:
     """
     Processa uma única faixa: carrega, segmenta, extrai embeddings e agrega.
     """
@@ -45,9 +45,7 @@ def process_track(filepath: str) -> dict:
     elapsed = time() - start_time
     logger.info(f"Processado {filepath} em {elapsed:.2f}s ({len(segments)} segmentos).")
     
-    # Extrair track_id do nome do arquivo
     basename = os.path.basename(filepath)
-    track_id = os.path.splitext(basename)[0]
     
     return {
         "track_id": track_id,
@@ -83,9 +81,10 @@ def process_directory(folder: str, output_dir: str):
     all_embeddings = []
     all_metadata = []
     
-    for filepath in tqdm(filepaths, desc="Processando faixas"):
+    for i, filepath in enumerate(tqdm(filepaths, desc="Processando faixas")):
         try:
-            result = process_track(filepath)
+            track_id_str = f"{i:04d}"
+            result = process_track(filepath, track_id=track_id_str)
             if result is not None:
                 all_embeddings.append(result["embedding"])
                 
@@ -122,7 +121,7 @@ if __name__ == "__main__":
     
     if args.test_file:
         logger.info(f"Testando pipeline em arquivo único: {args.test_file}")
-        res = process_track(args.test_file)
+        res = process_track(args.test_file, track_id="0000")
         if res:
             emb = res["embedding"]
             logger.info(f"Shape do embedding final: {emb.shape}")

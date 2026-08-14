@@ -7,3 +7,4 @@ tqdm
 chromadb
 pandas
 matplotlib
+python-mpd2

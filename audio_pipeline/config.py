@@ -1,10 +1,12 @@
 import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 MPD_HOST = "localhost"
 MPD_PORT = 6600
-CHROMA_PERSIST_DIR = "./chroma_db"
+CHROMA_PERSIST_DIR = os.path.join(BASE_DIR, "chroma_db")
 COLLECTION_NAME = "musicas_embeddings"
-MPD_CONF_PATH = "mpd.conf" # Ajuste para o local real se necessário, ex: /etc/mpd.conf
+MPD_CONF_PATH = os.path.join(BASE_DIR, "mpd.conf")
 
 def get_music_library_root(mpd_conf_path: str) -> str | None:
     """

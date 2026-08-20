@@ -80,14 +80,17 @@ def build_file_to_id_map(metadata_path: str, music_library_root: str) -> tuple[d
         track_id = str(meta['track_id'])
         filepath = meta['filepath']
         
-        if os.path.isabs(filepath):
-            if filepath.startswith(music_library_root):
-                rel_path = os.path.relpath(filepath, music_library_root)
+        norm_filepath = os.path.normpath(filepath)
+        norm_root = os.path.normpath(music_library_root)
+
+        if os.path.isabs(norm_filepath):
+            if norm_filepath.lower().startswith(norm_root.lower()):
+                rel_path = os.path.relpath(norm_filepath, norm_root)
             else:
                 rel_path = filepath
         else:
-            abs_path = os.path.join(music_library_root, filepath)
-            rel_path = os.path.relpath(abs_path, music_library_root)
+            abs_path = os.path.join(norm_root, norm_filepath)
+            rel_path = os.path.relpath(abs_path, norm_root)
             
         rel_path = rel_path.replace('\\', '/')
         
@@ -229,15 +232,8 @@ def monitor_and_recommend(client: MPDClient, collection, file_to_id_map: dict, i
                             logging.info(f"Recomendação '{next_file}' já é a próxima na fila. Pulando.")
                         else:
                             try:
-                                if cantata_base_url:
-                                    abs_next_path = os.path.join(music_root, next_file).replace('\\', '/')
-                                    abs_next_path_encoded = urllib.parse.quote(abs_next_path)
-                                    filename_encoded = urllib.parse.quote(os.path.basename(next_file))
-                                    path_to_add = f"{cantata_base_url}{filename_encoded}?file={abs_next_path_encoded}&id=-1&cantata=song"
-                                else:
-                                    path_to_add = next_file
-                                    
-                                # Adiciona a recomendação no final da fila (ou após a música atual se preferir gerenciar ordem exata)
+                                # Adiciona a recomendação no final da fila com o caminho relativo (MPD resolve isso nativamente)
+                                path_to_add = next_file
                                 client.add(path_to_add)
                                 logging.info(f"IA recomendou e injetou na fila: {next_file}")
                             except CommandError as e:

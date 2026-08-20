@@ -1,16 +1,28 @@
-# Sistema de Recomendação de Músicas
+# Recomendador Musical - Integração MPD/Cantata
 
-Este projeto utiliza ferramentas de Machine Learning e processamento de áudio para recomendar músicas com base no som (embeddings gerados por CLAP) e metadados.
+Este é um sistema de recomendação musical acústica baseado em IA, que utiliza ChromaDB e HuggingFace (Modelos CLAP) para analisar e recomendar faixas similares ao que você está ouvindo no momento no servidor MPD.
 
-## Dependências Adicionais (Windows)
+## Como funciona
+A aplicação roda em segundo plano observando as alterações no estado do seu player MPD. Quando uma faixa está tocando (ou ao pular de faixa), a IA processa o *fingerprint* sonoro e busca no banco de vetores as faixas mais semelhantes (sem usar metadados de texto), enfileirando automaticamente a melhor recomendação para tocar em seguida!
 
-O sistema utiliza a biblioteca `pyacoustid` para gerar "fingerprints" acústicos das músicas, permitindo identificar duplicatas e otimizar o banco de dados.
+## Estrutura do Projeto
+- `audio_pipeline/`: Código principal em Python (indexação, embeddings e integração com MPD).
+- `mpd.conf.example`: Exemplo de configuração do servidor MPD no Windows.
+- `iniciar_sistema.bat`: Script prático para rodar tanto o servidor MPD quanto a IA integradora.
 
-Para que o `pyacoustid` funcione corretamente no Windows, é **necessário** instalar o binário `fpcalc` (parte do projeto Chromaprint):
+## Instalação e Uso
 
-1. Baixe o Chromaprint para Windows no site oficial: [https://acoustid.org/chromaprint](https://acoustid.org/chromaprint)
-2. Extraia o arquivo ZIP baixado.
-3. Copie o arquivo `fpcalc.exe` para uma pasta que esteja no seu `PATH` de variáveis de ambiente do Windows, ou adicione a pasta extraída ao `PATH`.
-4. (Alternativa) Você pode colocar o `fpcalc.exe` diretamente na raiz do projeto (mesma pasta deste README) ou na pasta `audio_pipeline/`.
+1. **Configuração do MPD**
+   - Instale o MPD (Music Player Daemon) para Windows.
+   - Renomeie o `mpd.conf.example` para `mpd.conf` e edite o `music_directory` para apontar para sua biblioteca de áudio local (ex: `"G:/Meu Drive/Musicas"`).
 
-Sem o `fpcalc.exe`, a identificação de músicas duplicadas ou desconhecidas irá falhar.
+2. **Ambiente Python**
+   ```bash
+   cd audio_pipeline
+   python -m venv venv
+   venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. **Iniciando**
+   - Utilize o script `iniciar_sistema.bat` na raiz do projeto para rodar tudo automaticamente de forma sequencial.

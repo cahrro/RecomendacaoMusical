@@ -53,15 +53,17 @@ def index_unknown_track(filepath: str, metadata_path: str, collection, known_fin
         with open(metadata_path, 'r', encoding='utf-8') as f:
             metadata_list = json.load(f)
             
-    # Obter path relativo
-    if os.path.isabs(filepath):
-        if filepath.startswith(music_library_root):
-            rel_filepath = os.path.relpath(filepath, music_library_root)
+    norm_filepath = os.path.normpath(filepath)
+    norm_root = os.path.normpath(music_library_root)
+    
+    if os.path.isabs(norm_filepath):
+        if norm_filepath.lower().startswith(norm_root.lower()):
+            rel_filepath = os.path.relpath(norm_filepath, norm_root)
         else:
             rel_filepath = filepath
     else:
-        abs_path = os.path.join(music_library_root, filepath)
-        rel_filepath = os.path.relpath(abs_path, music_library_root)
+        abs_path = os.path.join(norm_root, norm_filepath)
+        rel_filepath = os.path.relpath(abs_path, norm_root)
         
     rel_filepath = rel_filepath.replace('\\', '/')
     filename = os.path.basename(filepath)

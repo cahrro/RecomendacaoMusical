@@ -1,65 +1,55 @@
-import argparse
+import os
 import json
 import logging
-import os
-from tqdm import tqdm
-
 from fingerprint import generate_fingerprint
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 def backfill(metadata_path: str, music_root: str):
+    """
+    Percorre o metadata.json existente e gera os fingerprints faltantes para cada arquivo.
+    """
     if not os.path.exists(metadata_path):
-        logger.error(f"Arquivo {metadata_path} não encontrado.")
+        logger.error(f"Arquivo metadata não encontrado em: {metadata_path}")
         return
-        
+
     with open(metadata_path, 'r', encoding='utf-8') as f:
         metadata_list = json.load(f)
         
-    changed = 0
-    errors = 0
+    updated = False
     
-    logger.info(f"Analisando {len(metadata_list)} faixas em {metadata_path}...")
-    
-    for entry in tqdm(metadata_list, desc="Gerando fingerprints"):
-        existing_fp = entry.get("fingerprint")
-        # Ignora apenas se já possuir fingerprint RAW (com vírgulas)
-        if existing_fp and ',' in existing_fp:
-            continue
-
+    for entry in metadata_list:
+        filepath = entry['filepath']
+        abs_path = filepath
+        if not os.path.isabs(filepath):
+            abs_path = os.path.join(music_root, filepath)
             
-        rel_filepath = entry.get("filepath")
-        if not rel_filepath:
+        if not os.path.exists(abs_path):
+            logger.warning(f"Arquivo não encontrado para backfill: {abs_path}")
             continue
             
-        abs_filepath = os.path.join(music_root, rel_filepath)
-        if not os.path.exists(abs_filepath):
-            logger.warning(f"Arquivo não encontrado: {abs_filepath}")
-            errors += 1
-            continue
-            
-        fp = generate_fingerprint(abs_filepath)
+        logger.info(f"Gerando fingerprint (raw) para: {abs_path}")
+        fp = generate_fingerprint(abs_path)
+        
         if fp:
-            entry["fingerprint"] = fp
-            changed += 1
+            entry['fingerprint'] = fp
+            updated = True
         else:
-            errors += 1
+            logger.error(f"Falha ao gerar fingerprint para: {abs_path}")
             
-    if changed > 0:
+    if updated:
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(metadata_list, f, ensure_ascii=False, indent=2)
-        logger.info(f"Sucesso! {changed} fingerprints adicionados e salvos em {metadata_path}.")
+        logger.info("Backfill concluído com sucesso e metadata.json atualizado.")
     else:
-        logger.info("Nenhuma modificação feita no arquivo de metadados.")
-        
-    if errors > 0:
-        logger.warning(f"Ocorreram {errors} erros (arquivos ausentes ou falha na geração).")
+        logger.info("Nenhum fingerprint novo foi gerado (todos já existem ou ocorreram erros).")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Gera fingerprints acústicos para faixas existentes no metadata.json")
-    parser.add_argument("--metadata", type=str, required=True, help="Caminho do metadata.json")
-    parser.add_argument("--music_root", type=str, required=True, help="Caminho absoluto da raiz da biblioteca de músicas")
-    
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--metadata", type=str, default="./results/metadata.json")
+    parser.add_argument("--music_root", type=str, default="C:/mpd/music")
     args = parser.parse_args()
+    
     backfill(args.metadata, args.music_root)

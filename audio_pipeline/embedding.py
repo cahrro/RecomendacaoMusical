@@ -40,3 +40,23 @@ def generate_embedding(audio_segment: np.ndarray, sr: int) -> np.ndarray:
         
     # Espera-se que seja shape (1, hidden_size)
     return embedding[0]
+
+def generate_embeddings_batch(segments_list: list[np.ndarray], sr: int) -> np.ndarray:
+    """
+    Gera embeddings para uma lista de segmentos de áudio em lote usando o modelo CLAP.
+    Otimiza muito o processamento na CPU paralelizando as operações matriciais.
+    """
+    if not segments_list:
+        return np.array([])
+        
+    _load_model()
+    
+    with torch.no_grad():
+        inputs = _PROCESSOR(audio=segments_list, sampling_rate=sr, return_tensors="pt")
+        inputs = {k: v.to(_DEVICE) for k, v in inputs.items()}
+        
+        outputs = _MODEL.get_audio_features(**inputs)
+        embeddings = outputs.pooler_output.cpu().numpy()
+        
+    # Retorna shape (n_segments, hidden_size)
+    return embeddings

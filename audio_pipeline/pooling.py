@@ -1,15 +1,16 @@
 import numpy as np
 
-def aggregate_embeddings(embeddings: list[np.ndarray], method: str = "mean") -> np.ndarray:
+def aggregate_embeddings(embeddings, method: str = "mean") -> np.ndarray:
     """
     Agrega embeddings de múltiplos segmentos em um único vetor global.
     """
-    if not embeddings:
+    if len(embeddings) == 0:
         return np.array([])
         
     if method == "mean":
-        stacked = np.stack(embeddings)
-        return np.mean(stacked, axis=0)
+        if isinstance(embeddings, list):
+            embeddings = np.stack(embeddings)
+        return np.mean(embeddings, axis=0)
     elif method == "transformer":
         # Hook para implementação futura
         raise NotImplementedError("Transformer pooling ainda não implementado.")

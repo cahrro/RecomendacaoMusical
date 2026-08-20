@@ -9,6 +9,7 @@ import urllib.parse
 
 import config
 import vector_store
+import auto_indexer
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -121,8 +122,10 @@ def get_next_recommendation(collection, current_track_id: str, file_to_id_map: d
             
     return None
 
-def monitor_and_recommend(client: MPDClient, collection, file_to_id_map: dict, id_to_file_map: dict, trigger_mode: str = "on_change", music_root: str = "") -> None:
+def monitor_and_recommend(client: MPDClient, collection, file_to_id_map: dict, id_to_file_map: dict, trigger_mode: str = "on_change", music_root: str = "", metadata_path: str = "", known_fingerprints: dict = None) -> None:
     """Loop principal que aguarda mudanças no MPD e enfileira recomendações."""
+    if known_fingerprints is None:
+        known_fingerprints = {}
     last_processed_file = None
     play_history = deque(maxlen=15)
     
@@ -175,8 +178,35 @@ def monitor_and_recommend(client: MPDClient, collection, file_to_id_map: dict, i
                     current_track_id = file_to_id_map.get(current_file)
                     
                     if not current_track_id:
-                        logging.warning(f"Faixa atual '{current_file}' não encontrada no índice.")
-                        continue
+                        logging.warning(f"Faixa atual '{current_file}' não encontrada no índice. Tentando indexação automática...")
+                        # Tentar resolver path absoluto
+                        if os.path.isabs(current_file):
+                            abs_filepath = current_file
+                        else:
+                            abs_filepath = os.path.join(music_root, current_file)
+                            
+                        if not os.path.exists(abs_filepath):
+                            logging.error(f"Arquivo não encontrado fisicamente: {abs_filepath}")
+                            continue
+                            
+                        # Chamar indexação lazy
+                        new_track_id = auto_indexer.index_unknown_track(
+                            filepath=abs_filepath,
+                            metadata_path=metadata_path,
+                            collection=collection,
+                            known_fingerprints=known_fingerprints,
+                            music_library_root=music_root
+                        )
+                        
+                        if new_track_id:
+                            # Atualizar mapas em memória
+                            file_to_id_map[current_file] = new_track_id
+                            id_to_file_map[new_track_id] = current_file
+                            current_track_id = new_track_id
+                        else:
+                            logging.warning("Falha na indexação automática. Nenhuma recomendação será gerada.")
+                            continue
+
                         
                     play_history.append(current_track_id)
                         
@@ -278,6 +308,10 @@ if __name__ == "__main__":
         # Não damos exit pois o MPD pode estar em outra máquina onde o caminho é válido, mas localmente não,
         # ou se usou um diretório virtual.
         
+    # Carregar fingerprints
+    logging.info("Carregando fingerprints conhecidos...")
+    known_fingerprints = auto_indexer.load_known_fingerprints(args.metadata)
+    
     # 3. Conectar ChromaDB
     chroma_client = vector_store.get_client(config.CHROMA_PERSIST_DIR)
     collection = vector_store.get_or_create_collection(chroma_client, config.COLLECTION_NAME)
@@ -293,7 +327,7 @@ if __name__ == "__main__":
         print("=============================================\n")
         
         # 5. Loop principal
-        monitor_and_recommend(mpd_client, collection, file_to_id, id_to_file, args.trigger_mode, music_root)
+        monitor_and_recommend(mpd_client, collection, file_to_id, id_to_file, args.trigger_mode, music_root, args.metadata, known_fingerprints)
         
     except KeyboardInterrupt:
         logging.info("\nEncerrando sistema (KeyboardInterrupt)...")

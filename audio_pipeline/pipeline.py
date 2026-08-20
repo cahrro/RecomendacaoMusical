@@ -9,7 +9,7 @@ from time import time
 
 from ingestion import load_audio
 from segmentation import segment_audio
-from embedding import generate_embedding
+from embedding import generate_embedding, generate_embeddings_batch
 from pooling import aggregate_embeddings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -22,8 +22,8 @@ def process_track(filepath: str, track_id: str, subgenero: str, rel_filepath: st
     start_time = time()
     sr = 48000
     
-    # 1. Ingestão
-    audio = load_audio(filepath, sr=sr)
+    # 1. Ingestão (Amostragem Inteligente: pula 15s, lê 45s)
+    audio = load_audio(filepath, sr=sr, offset=15.0, duration=45.0)
     if audio is None:
         return None
         
@@ -33,11 +33,12 @@ def process_track(filepath: str, track_id: str, subgenero: str, rel_filepath: st
         logger.warning(f"Faixa {filepath} não possui segmentos válidos (muito curta?).")
         return None
         
-    # 3. Extração de Embeddings
-    segment_embeddings = []
-    for seg in segments:
-        emb = generate_embedding(seg, sr=sr)
-        segment_embeddings.append(emb)
+    # 3. Extração de Embeddings (Em Lote / Batch Inference)
+    if len(segments) > 0:
+        segment_embeddings = generate_embeddings_batch(segments, sr=sr)
+    else:
+        logger.warning(f"Faixa {filepath} não gerou segmentos.")
+        return None
         
     # 4. Pooling
     global_embedding = aggregate_embeddings(segment_embeddings, method="mean")

@@ -26,3 +26,37 @@ A aplicação roda em segundo plano observando as alterações no estado do seu 
 
 3. **Iniciando**
    - Utilize o script `iniciar_sistema.bat` na raiz do projeto para rodar tudo automaticamente de forma sequencial.
+
+## Painel de Acompanhamento de Métricas (Streamlit)
+
+O painel exibe em tempo real as métricas de Precision@K, histogramas e histórico de execuções.
+
+### Abrir o Painel
+
+| Método | Como fazer |
+|--------|-----------|
+| **Duplo clique** | `audio_pipeline\results\abrir_painel.bat` |
+| **Automático** | O `iniciar_sistema.bat` já sobe o painel (se `ABRIR_PAINEL=1`) |
+| **Atalho na área de trabalho** | Execute `audio_pipeline\results\criar_atalho_desktop.ps1` uma vez |
+
+O painel estará disponível em: **http://localhost:8501**
+
+### Parar o Painel
+
+- Execute `audio_pipeline\results\parar_painel.bat` (duplo clique)
+- Ou encerre o processo `streamlit.exe` pelo Gerenciador de Tarefas
+
+### Desativar o painel no iniciar_sistema.bat
+
+Edite `iniciar_sistema.bat` e mude a linha:
+```bat
+set ABRIR_PAINEL=0
+```
+
+### Gerar Métricas Manualmente
+
+Dentro do painel, use o botão **"Executar geração"** na barra lateral.
+Ou via terminal (dentro de `audio_pipeline\`):
+```bash
+.\venv\Scripts\python.exe results\generate_precision_k.py --k 5
+```
